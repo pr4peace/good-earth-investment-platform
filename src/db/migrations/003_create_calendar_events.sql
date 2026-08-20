@@ -1,5 +1,5 @@
 CREATE TABLE calendar_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agreement_id UUID NOT NULL REFERENCES agreements(id) ON DELETE CASCADE,
   payout_number INTEGER,
   event_type TEXT NOT NULL CHECK (event_type IN ('interest_payout', 'tds_filing', 'renewal_check', 'agreement_expiry')),
