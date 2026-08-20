@@ -1,6 +1,7 @@
 const pool = require("../db/pool");
 const { verifyToken } = require("./jwt");
 const { extractBearerToken } = require("./extractBearerToken");
+const { asyncHandler } = require("../utils/asyncHandler");
 
 async function authenticate(req, res, next) {
   const token = extractBearerToken(req);
@@ -38,4 +39,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authenticate, requireRole };
+module.exports = { authenticate: asyncHandler(authenticate), requireRole };

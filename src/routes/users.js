@@ -1,12 +1,13 @@
 const express = require("express");
 const pool = require("../db/pool");
 const { authenticate, requireRole } = require("../auth/middleware");
+const { asyncHandler } = require("../utils/asyncHandler");
 
 const VALID_ROLES = ["admin", "investment_manager", "salesperson", "accounts_team"];
 
 const router = express.Router();
 
-router.patch("/:id/role", authenticate, requireRole("admin"), async (req, res) => {
+router.patch("/:id/role", authenticate, requireRole("admin"), asyncHandler(async (req, res) => {
   const { role } = req.body;
 
   if (!VALID_ROLES.includes(role)) {
@@ -23,6 +24,6 @@ router.patch("/:id/role", authenticate, requireRole("admin"), async (req, res) =
   }
 
   res.json(rows[0]);
-});
+}));
 
 module.exports = router;

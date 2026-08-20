@@ -3,10 +3,11 @@ const pool = require("../db/pool");
 const { verifyGoogleIdToken } = require("../auth/googleVerify");
 const { signToken, verifyToken } = require("../auth/jwt");
 const { extractBearerToken } = require("../auth/extractBearerToken");
+const { asyncHandler } = require("../utils/asyncHandler");
 
 const router = express.Router();
 
-router.post("/google", async (req, res) => {
+router.post("/google", asyncHandler(async (req, res) => {
   const { id_token } = req.body;
   if (!id_token) {
     return res.status(400).json({ error: "id_token is required" });
@@ -19,27 +20,20 @@ router.post("/google", async (req, res) => {
     return res.status(401).json({ error: "Invalid Google ID token" });
   }
 
-  const { rows: existingRows } = await pool.query(
-    "SELECT id, email, name, role FROM users WHERE google_id = $1",
-    [profile.google_id]
+  const { rows } = await pool.query(
+    `INSERT INTO users (google_id, email, name)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (google_id) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name
+     RETURNING id, email, name, role`,
+    [profile.google_id, profile.email, profile.name]
   );
-
-  let user;
-  if (existingRows.length > 0) {
-    user = existingRows[0];
-  } else {
-    const { rows: insertedRows } = await pool.query(
-      "INSERT INTO users (google_id, email, name) VALUES ($1, $2, $3) RETURNING id, email, name, role",
-      [profile.google_id, profile.email, profile.name]
-    );
-    user = insertedRows[0];
-  }
+  const user = rows[0];
 
   const token = signToken({ user_id: user.id, email: user.email, role: user.role });
   res.json({ token, user });
-});
+}));
 
-router.get("/me", async (req, res) => {
+router.get("/me", asyncHandler(async (req, res) => {
   const token = extractBearerToken(req);
 
   if (!token) {
@@ -63,6 +57,6 @@ router.get("/me", async (req, res) => {
   }
 
   res.json(rows[0]);
-});
+}));
 
 module.exports = router;

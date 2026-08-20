@@ -63,6 +63,28 @@ describe("POST /auth/google", () => {
     expect(rows).toHaveLength(1);
   });
 
+  test("syncs name/email from Google on repeat login without losing the assigned role", async () => {
+    await pool.query(
+      "INSERT INTO users (google_id, email, name, role) VALUES ($1, $2, $3, $4)",
+      ["g-4", "old-name@example.com", "Old Name", "investment_manager"]
+    );
+    verifyGoogleIdToken.mockResolvedValue({
+      google_id: "g-4",
+      email: "new-name@example.com",
+      name: "New Name",
+    });
+
+    const res = await request(app).post("/auth/google").send({ id_token: "fake-token" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.name).toBe("New Name");
+    expect(res.body.user.email).toBe("new-name@example.com");
+    expect(res.body.user.role).toBe("investment_manager");
+
+    const { rows } = await pool.query("SELECT * FROM users WHERE google_id = $1", ["g-4"]);
+    expect(rows).toHaveLength(1);
+  });
+
   test("returns 401 when the Google token is invalid", async () => {
     verifyGoogleIdToken.mockRejectedValue(new Error("invalid token"));
 
