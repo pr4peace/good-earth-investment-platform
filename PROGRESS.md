@@ -22,25 +22,22 @@
 
 ## Current State
 
-- **Stable branch:** `main` — foundation scaffold merged, tests green, pushed to GitHub.
-- **In-progress branch:** `feature/google-oauth-rbac` — plan written, implementation not yet started.
+- **Stable branch:** `main` — foundation scaffold + Google OAuth/RBAC merged, tests green (20 tests, 7 suites), pushed to GitHub. Latest commit: `6e87231`.
+- **In-progress branch:** none — `feature/google-oauth-rbac` merged and can be deleted locally/remotely once confirmed no longer needed.
 - **Local Postgres:** installed & running (see step 5 above).
+- **Auth is live but has no consumers yet:** `authenticate`/`requireRole` (from `src/auth/middleware.js`) exist and are tested, but no agreement/payout/calendar routes exist yet to protect with them. The next subsystem plan should import and use these by name rather than reinventing auth.
+- **Bootstrapping note:** there are no `admin`-role users in a fresh DB. The very first Admin must be set manually via SQL: `UPDATE users SET role = 'admin' WHERE email = '...'` (that user must sign in via `/auth/google` at least once first, so their row exists).
 
 ### Completed
 
 | Plan | Branch | Status |
 |---|---|---|
-| [Foundation Scaffold](docs/superpowers/plans/2026-08-20-foundation-scaffold.md) | `main` | ✅ Merged. Express skeleton, Postgres pool, migrations for `agreements`/`payouts`/`calendar_events`/`audit_trail`, `/health` + `/health/db` endpoints. All 4 tasks reviewed and approved (1 fix round on Task 3 — transaction bug + `calendar_events.id`→`event_id` rename). Final whole-branch review approved after 2 more small fixes (pool error handler, DB health-check error logging). Latest commit: `782b487`. |
-
-### In Progress
-
-| Plan | Branch | Status |
-|---|---|---|
-| [Google OAuth + RBAC](docs/superpowers/plans/2026-08-20-google-oauth-rbac.md) | `feature/google-oauth-rbac` | 📝 Plan written, NOT yet implemented. 4 tasks: (1) `users` table migration, (2) JWT + Google ID token verification helpers, (3) `POST /auth/google` + `GET /auth/me` routes, (4) `authenticate`/`requireRole` middleware + admin-only role-assignment route. Branch created off `main` at commit `782b487`, no commits on it yet. |
+| [Foundation Scaffold](docs/superpowers/plans/2026-08-20-foundation-scaffold.md) | merged to `main` | ✅ Express skeleton, Postgres pool, migrations for `agreements`/`payouts`/`calendar_events`/`audit_trail`, `/health` + `/health/db` endpoints. All 4 tasks reviewed and approved (1 fix round on Task 3 — transaction bug + `calendar_events.id`→`event_id` rename). Final whole-branch review approved after 2 more small fixes (pool error handler, DB health-check error logging). |
+| [Google OAuth + RBAC](docs/superpowers/plans/2026-08-20-google-oauth-rbac.md) | merged to `main` (was `feature/google-oauth-rbac`) | ✅ `users` table + migration, JWT sign/verify (`src/auth/jwt.js`), Google ID token verification (`src/auth/googleVerify.js`), `POST /auth/google` (atomic upsert, preserves role, syncs name/email) + `GET /auth/me`, `authenticate`/`requireRole` middleware (`src/auth/middleware.js`) re-fetches role from DB every request — not trusted from the JWT claim — so a role change or revocation takes effect immediately, `PATCH /users/:id/role` (admin-only). Global async error boundary added (`src/utils/asyncHandler.js` + `src/app.js`'s trailing error middleware) so a DB failure returns a clean 500 instead of hanging/crashing. One fix round mid-plan (extracted shared `extractBearerToken` helper) and one fix round on final review (async error boundary + atomic upsert to close a signup race condition). Merge commit: `6e87231`. |
 
 ### Not Started (per PLAN.md's Phase 1 roadmap)
 
-- Agreement creation form (KYC + investment terms, backend route + validation)
+- Agreement creation form (KYC + investment terms, backend route + validation) — should be protected with `authenticate` + `requireRole('investment_manager', 'admin')` per PLAN.md's permissions table
 - Payout schedule generator (Gemini-coded per PLAN.md's multi-AI orchestration section, Codex-verified — flat 10% TDS default with per-agreement override, weekend payout dates shift to preceding Friday)
 - PDF agreement document generation (decided: generate immediately in Phase 1, not deferred — see PLAN.md's "Open Questions — RESOLVED" section)
 - In-app calendar + calendar event creation/storage
@@ -84,6 +81,7 @@
 
 Newest entries at the top. One entry per work session, regardless of which AI did the work — note which AI/tool in each entry.
 
+- **2026-08-20 (Claude Code):** Implemented the Google OAuth + RBAC plan in full (4 tasks, subagent-driven development) and merged to `main` (`6e87231`). Two fix rounds along the way: (1) extracted a shared `extractBearerToken` helper mid-plan so the route and the middleware didn't duplicate Bearer-parsing logic; (2) on final whole-branch review, added an async error boundary (`asyncHandler` + global Express error middleware) and replaced a SELECT-then-INSERT login upsert with an atomic `INSERT ... ON CONFLICT` to close a signup race condition. One implementer subagent died mid-task to a connection error partway through the second fix round — resumed cleanly from the uncommitted working-tree state rather than restarting, no lost work. Deferred (not fixed, judged acceptable for Phase 1): JWT_SECRET not fail-fast at boot, no defensive check on empty Google payload, `extractBearerToken` tolerant of malformed multi-part headers, and a rare edge case where two different Google accounts sharing an email would collide on the `users.email` UNIQUE constraint during the upsert (surfaces as a 500, arguably should be 409 — flag if it ever actually happens).
 - **2026-08-20 (Claude Code):** Wrote the Google OAuth + RBAC plan (`docs/superpowers/plans/2026-08-20-google-oauth-rbac.md`), created `feature/google-oauth-rbac` branch off `main`. Not yet implemented. Created this PROGRESS.md file for cross-AI handoff.
 - **2026-08-20 (Claude Code):** Created private GitHub repo `pr4peace/good-earth-investment-platform`, pushed `main`.
 - **2026-08-20 (Claude Code):** Implemented and merged the Foundation Scaffold plan (4 tasks, subagent-driven development, 2 review-fix rounds). Installed local Postgres 16 via Homebrew for dev since neither Docker nor an existing Postgres install was available.
