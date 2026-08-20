@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../db/pool");
 const { verifyGoogleIdToken } = require("../auth/googleVerify");
 const { signToken, verifyToken } = require("../auth/jwt");
+const { extractBearerToken } = require("../auth/extractBearerToken");
 
 const router = express.Router();
 
@@ -39,10 +40,9 @@ router.post("/google", async (req, res) => {
 });
 
 router.get("/me", async (req, res) => {
-  const authHeader = req.headers.authorization || "";
-  const [scheme, token] = authHeader.split(" ");
+  const token = extractBearerToken(req);
 
-  if (scheme !== "Bearer" || !token) {
+  if (!token) {
     return res.status(401).json({ error: "Missing or malformed Authorization header" });
   }
 
