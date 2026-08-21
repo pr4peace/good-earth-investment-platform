@@ -1,0 +1,8 @@
+{
+  "projectId": "",
+  "plugins": [
+    "npm",
+    "postgres"
+  ],
+  "$schema": "https://railway.app/railway.schema.json"
+}
