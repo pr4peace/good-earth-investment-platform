@@ -5,19 +5,6 @@ const usersRouter = require("./routes/users");
 
 const app = express();
 app.use(express.json());
-
-// Root route
-app.get("/", (req, res) => {
-  res.json({
-    message: "Good Earth Investment Platform API",
-    endpoints: {
-      health: "/health",
-      auth: "/auth",
-      users: "/users"
-    }
-  });
-});
-
 app.use("/health", healthRouter);
 app.use("/auth", authRouter);
 app.use("/users", usersRouter);
