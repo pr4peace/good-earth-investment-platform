@@ -1,20 +1,10 @@
 const express = require("express");
-const path = require("path");
 const healthRouter = require("./routes/health");
 const authRouter = require("./routes/auth");
 const usersRouter = require("./routes/users");
 
 const app = express();
 app.use(express.json());
-
-// Serve static files from public folder
-app.use(express.static(path.join(__dirname, "public")));
-
-// Root route
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
 app.use("/health", healthRouter);
 app.use("/auth", authRouter);
 app.use("/users", usersRouter);
